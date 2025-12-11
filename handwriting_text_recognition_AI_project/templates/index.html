@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Handwritten Text Recognition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 900px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 60px 20px;
+            text-align: center;
+            background: #f8f9ff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            background: #e8ebff;
+            border-color: #764ba2;
+            transform: scale(1.02);
+        }
+
+        .upload-area.processing {
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        .upload-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 1.2em;
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .url-section {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .url-input {
+            width: 70%;
+            padding: 12px 20px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            font-size: 1em;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .url-input:focus {
+            border-color: #667eea;
+        }
+
+        .process-btn {
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: background 0.3s;
+        }
+
+        .process-btn:hover {
+            background: #764ba2;
+        }
+
+        .process-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .loader {
+            display: none;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .image-preview {
+            max-width: 100%;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .result-box {
+            background: #f8f9ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .result-label {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .result-text {
+            font-size: 1.2em;
+            color: #333;
+            line-height: 1.6;
+            word-wrap: break-word;
+        }
+
+        .error {
+            background: #fee;
+            border-left: 4px solid #e74c3c;
+            color: #c0392b;
+        }
+
+        .success {
+            background: #efe;
+            border-left: 4px solid #27ae60;
+            color: #229954;
+        }
+
+        .copy-btn {
+            padding: 8px 20px;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+
+        .copy-btn:hover {
+            background: #059669;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        .accuracy-metrics {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .metric-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .metric-label {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .metric-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #4caf50;
+        }
+
+        .metric-value.excellent { color: #4caf50; }
+        .metric-value.good { color: #8bc34a; }
+        .metric-value.fair { color: #ffc107; }
+        .metric-value.poor { color: #ff9800; }
+        .metric-value.bad { color: #f44336; }
+
+        .accuracy-section {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: #f0f8ff;
+            border-radius: 15px;
+            border: 2px solid #667eea;
+        }
+
+        .accuracy-section.visible {
+            display: block;
+        }
+
+        .accuracy-input {
+            width: 100%;
+            min-height: 80px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1em;
+            font-family: inherit;
+            resize: vertical;
+            margin: 10px 0;
+        }
+
+        .accuracy-input:focus {
+            border-color: #667eea;
+            outline: none;
+        }
+
+        .calc-accuracy-btn {
+            padding: 12px 30px;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-top: 10px;
+        }
+
+        .calc-accuracy-btn:hover {
+            background: #059669;
+        }
+
+        .calc-accuracy-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+
+            .url-input {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+
+            .process-btn {
+                margin-left: 0;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📝 Handwritten Text Recognition</h1>
+        <p class="subtitle">AI-powered OCR with TrOCR</p>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📤</div>
+            <div class="upload-text">Drag & Drop your image here</div>
+            <div class="upload-hint">or click to browse (JPG, PNG, BMP, GIF, TIFF, WebP)</div>
+        </div>
+
+        <input type="file" id="fileInput" accept="image/*">
+
+        <div class="url-section" style="visibility: hidden;">
+            <p style="color: #666; margin-bottom: 10px;">Or enter image URL:</p>
+            <input type="text" id="urlInput" class="url-input" placeholder="https://example.com/image.jpg">
+            <button onclick="processUrl()" class="process-btn" id="urlBtn">Process URL</button>
+        </div>
+
+        <div class="ground-truth-section" style="margin: 20px 0; padding: 20px; background: #fff9e6; border-radius: 15px; border: 2px solid #ffd700;">
+            <p style="color: #666; margin-bottom: 10px; font-weight: 600;">📊 Optional: Enter Ground Truth for Accuracy Measurement</p>
+            <textarea id="groundTruthInput" class="url-input" style="width: 90%; min-height: 60px; padding: 15px; border-radius: 10px; resize: vertical; font-family: inherit;" placeholder="Enter the correct text to measure OCR accuracy..."></textarea>
+            <p style="color: #999; font-size: 0.85em; margin-top: 8px;">💡 This will calculate Character Error Rate (CER), Word Error Rate (WER), and accuracy metrics</p>
+        </div>
+
+        <div class="loader" id="loader"></div>
+
+        <div class="results" id="results">
+            <img id="imagePreview" class="image-preview" alt="Uploaded image">
+            <div class="result-box">
+                <div class="result-label">
+                    <span>✅ Recognized Text:</span>
+                    <button onclick="copyText()" class="copy-btn">📋 Copy</button>
+                </div>
+                <div class="result-text" id="resultText"></div>
+            </div>
+        </div>
+
+        <div class="accuracy-section" id="accuracySection">
+            <h3 style="color: #667eea; margin-bottom: 15px;">📊 Calculate Accuracy</h3>
+            <p style="color: #666; margin-bottom: 10px;">Enter the correct text (ground truth) to measure OCR accuracy:</p>
+            <textarea id="postGroundTruthInput" class="accuracy-input" placeholder="Enter the correct text here..."></textarea>
+            <button onclick="calculateAccuracy()" class="calc-accuracy-btn" id="calcAccBtn">Calculate Accuracy</button>
+            <div id="accuracyResults"></div>
+        </div>
+
+        <div class="footer">
+            AI-Powered Handwriting Recognition | v2.0.0
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const urlInput = document.getElementById('urlInput');
+        const loader = document.getElementById('loader');
+        const results = document.getElementById('results');
+        const imagePreview = document.getElementById('imagePreview');
+        const resultText = document.getElementById('resultText');
+
+        // Click to upload
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        // File input change
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                processFile(e.target.files[0]);
+            }
+        });
+
+        // Drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+
+            if (e.dataTransfer.files.length > 0) {
+                processFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        async function processFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const groundTruth = document.getElementById('groundTruthInput').value.trim();
+            if (groundTruth) {
+                formData.append('ground_truth', groundTruth);
+            }
+
+            showLoading();
+
+            try {
+                const endpoint = groundTruth ? '/recognize_with_accuracy' : '/recognize';
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showResults(data);
+                } else {
+                    showError(data.error || 'Failed to process image');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+
+            hideLoading();
+        }
+
+        async function processUrl() {
+            const url = urlInput.value.trim();
+            if (!url) {
+                alert('Please enter a URL');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('url', url);
+
+            const groundTruth = document.getElementById('groundTruthInput').value.trim();
+            if (groundTruth) {
+                formData.append('ground_truth', groundTruth);
+            }
+
+            showLoading();
+
+            try {
+                const endpoint = groundTruth ? '/recognize_with_accuracy' : '/recognize';
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // For URL, we don't have image preview
+                    imagePreview.style.display = 'none';
+                    showResults(data);
+                } else {
+                    showError(data.error || 'Failed to process URL');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+
+            hideLoading();
+        }
+
+        function showLoading() {
+            loader.style.display = 'block';
+            results.style.display = 'none';
+            uploadArea.classList.add('processing');
+            document.getElementById('urlBtn').disabled = true;
+        }
+
+        function hideLoading() {
+            loader.style.display = 'none';
+            uploadArea.classList.remove('processing');
+            document.getElementById('urlBtn').disabled = false;
+        }
+
+        function getAccuracyClass(accuracy) {
+            if (accuracy >= 95) return 'excellent';
+            if (accuracy >= 85) return 'good';
+            if (accuracy >= 70) return 'fair';
+            if (accuracy >= 50) return 'poor';
+            return 'bad';
+        }
+
+        function showResults(data) {
+            // Clear previous results
+            results.innerHTML = '';
+
+            if (data.image) {
+                const img = document.createElement('img');
+                img.src = data.image;
+                img.className = 'image-preview';
+                img.alt = 'Uploaded image';
+                results.appendChild(img);
+            }
+
+            // Show recognized text
+            const resultBox = document.createElement('div');
+            resultBox.className = 'result-box';
+            resultBox.innerHTML = `
+                <div class="result-label">
+                    <span>✅ Recognized Text:</span>
+                    <button onclick="copyText()" class="copy-btn">📋 Copy</button>
+                </div>
+                <div class="result-text" id="resultText">${data.text || 'No text detected'}</div>
+            `;
+            results.appendChild(resultBox);
+
+            // Show accuracy metrics if available
+            if (data.accuracy_metrics) {
+                displayAccuracyMetrics(data.accuracy_metrics);
+            }
+
+            results.style.display = 'block';
+
+            // Show the accuracy calculation section after results
+            document.getElementById('accuracySection').classList.add('visible');
+            // Clear previous accuracy results when new OCR is done
+            document.getElementById('accuracyResults').innerHTML = '';
+            document.getElementById('postGroundTruthInput').value = '';
+        }
+
+        function displayAccuracyMetrics(metrics) {
+            const metricsBox = document.createElement('div');
+            metricsBox.className = 'accuracy-metrics';
+
+            const charAccClass = getAccuracyClass(metrics.character_accuracy);
+            const wordAccClass = getAccuracyClass(metrics.word_accuracy);
+
+            metricsBox.innerHTML = `
+                <div class="result-label">
+                    <span>📊 Accuracy Metrics</span>
+                </div>
+                <div class="metrics-grid">
+                    <div class="metric-item">
+                        <div class="metric-label">Character Accuracy</div>
+                        <div class="metric-value ${charAccClass}">${metrics.character_accuracy}%</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-label">Word Accuracy</div>
+                        <div class="metric-value ${wordAccClass}">${metrics.word_accuracy}%</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-label">Character Error Rate</div>
+                        <div class="metric-value">${metrics.character_error_rate}%</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-label">Word Error Rate</div>
+                        <div class="metric-value">${metrics.word_error_rate}%</div>
+                    </div>
+                </div>
+                <div style="margin-top: 15px; padding: 12px; background: white; border-radius: 8px; font-size: 0.9em;">
+                    <strong>Statistics:</strong><br>
+                    Ground truth: ${metrics.ground_truth_length} chars, ${metrics.ground_truth_word_count} words<br>
+                    Predicted: ${metrics.predicted_length} chars, ${metrics.predicted_word_count} words<br>
+                    Edit distance: ${metrics.levenshtein_distance}
+                </div>
+            `;
+            results.appendChild(metricsBox);
+        }
+
+        function showError(message) {
+            results.style.display = 'block';
+            imagePreview.style.display = 'none';
+
+            const resultBox = document.querySelector('.result-box');
+            resultBox.className = 'result-box error';
+
+            const resultLabel = document.querySelector('.result-label');
+            resultLabel.innerHTML = '<span>❌ Error:</span>';
+
+            resultText.textContent = message;
+        }
+
+        function copyText() {
+            const resultTextEl = document.getElementById('resultText');
+            if (resultTextEl) {
+                const text = resultTextEl.textContent;
+                navigator.clipboard.writeText(text).then(() => {
+                    const btn = event.target;
+                    const originalText = btn.textContent;
+                    btn.textContent = '✅ Copied!';
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                    }, 2000);
+                });
+            }
+        }
+
+        // Enter key for URL input
+        urlInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                processUrl();
+            }
+        });
+
+        // Calculate accuracy function
+        async function calculateAccuracy() {
+            const groundTruth = document.getElementById('postGroundTruthInput').value.trim();
+            const recognizedText = document.getElementById('resultText').textContent.trim();
+
+            if (!groundTruth) {
+                alert('Please enter the ground truth text');
+                return;
+            }
+
+            if (!recognizedText || recognizedText === 'No text detected') {
+                alert('No recognized text available. Please run OCR first.');
+                return;
+            }
+
+            const calcBtn = document.getElementById('calcAccBtn');
+            calcBtn.disabled = true;
+            calcBtn.textContent = 'Calculating...';
+
+            try {
+                const response = await fetch('/calculate_accuracy', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        ground_truth: groundTruth,
+                        predicted: recognizedText
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const accuracyResultsDiv = document.getElementById('accuracyResults');
+                    const metrics = data.metrics;
+
+                    const charAccClass = getAccuracyClass(metrics.character_accuracy);
+                    const wordAccClass = getAccuracyClass(metrics.word_accuracy);
+
+                    accuracyResultsDiv.innerHTML = `
+                        <div class="accuracy-metrics" style="margin-top: 20px;">
+                            <div class="result-label">
+                                <span>✅ Accuracy Results</span>
+                            </div>
+                            <div class="metrics-grid">
+                                <div class="metric-item">
+                                    <div class="metric-label">Character Accuracy</div>
+                                    <div class="metric-value ${charAccClass}">${metrics.character_accuracy}%</div>
+                                </div>
+                                <div class="metric-item">
+                                    <div class="metric-label">Word Accuracy</div>
+                                    <div class="metric-value ${wordAccClass}">${metrics.word_accuracy}%</div>
+                                </div>
+                                <div class="metric-item">
+                                    <div class="metric-label">Character Error Rate</div>
+                                    <div class="metric-value">${metrics.character_error_rate}%</div>
+                                </div>
+                                <div class="metric-item">
+                                    <div class="metric-label">Word Error Rate</div>
+                                    <div class="metric-value">${metrics.word_error_rate}%</div>
+                                </div>
+                            </div>
+                            <div style="margin-top: 15px; padding: 12px; background: white; border-radius: 8px; font-size: 0.9em;">
+                                <strong>Statistics:</strong><br>
+                                Ground truth: ${metrics.ground_truth_length} chars, ${metrics.ground_truth_word_count} words<br>
+                                Predicted: ${metrics.predicted_length} chars, ${metrics.predicted_word_count} words<br>
+                                Edit distance: ${metrics.levenshtein_distance}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to calculate accuracy'));
+                }
+            } catch (error) {
+                alert('Network error: ' + error.message);
+            } finally {
+                calcBtn.disabled = false;
+                calcBtn.textContent = 'Calculate Accuracy';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+MODEL_NAME = "microsoft/trocr-large-handwritten"
+MAX_NEW_TOKENS = 100
+MAX_IMAGE_DIMENSION = 768
+WINDOW_TITLE = "Handwritten Text Recognition"
+WINDOW_WIDTH = 1080
+WINDOW_HEIGHT = 800
+IMAGE_DISPLAY_WIDTH = 1300
+IMAGE_DISPLAY_HEIGHT = 650
+DEFAULT_THEME = "dark"
+COLOR_THEME = "blue"
+SUPPORTED_FORMATS = ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp']
+MAX_IMAGE_SIZE_MB = 10
